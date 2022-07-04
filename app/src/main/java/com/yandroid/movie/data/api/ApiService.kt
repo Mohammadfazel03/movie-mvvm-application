@@ -10,7 +10,7 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-const val APIKEY = "b3be3b9f720da6eeb41440884846a8c9"
+const val APIKEY = "YOUR-API-KEY"
 
 interface ApiService {
 
