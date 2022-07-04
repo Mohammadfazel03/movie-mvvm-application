@@ -57,7 +57,7 @@ fun CategoryScreen(modifier: Modifier, navController: NavController) {
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            if (errorText.value.isNullOrEmpty()) {
+            if (errorText.value.isNullOrEmpty() && listOfGenres.value != null) {
                 LazyVerticalGrid(cells = GridCells.Fixed(2)) {
                     items(listOfGenres.value!!.size) {
                         ItemOfGenre(
@@ -85,7 +85,7 @@ fun CategoryScreen(modifier: Modifier, navController: NavController) {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun ItemOfGenre(genre:Genre, url: String, onClick: (id:Int) -> Unit) {
+fun ItemOfGenre(genre: Genre, url: String, onClick: (id: Int) -> Unit) {
     var background by remember { mutableStateOf(PrimaryColor) }
     var scale by remember { mutableStateOf(1f) }
     val animScale by animateFloatAsState(targetValue = scale)

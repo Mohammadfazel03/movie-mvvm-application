@@ -1,5 +1,6 @@
 package com.yandroid.movie.ui.view.Search
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
@@ -11,6 +12,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -18,11 +20,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Black
@@ -53,11 +54,15 @@ import coil.compose.rememberAsyncImagePainter
 import com.yandroid.movie.R
 import com.yandroid.movie.data.model.Genre
 import com.yandroid.movie.data.model.Movie
-import com.yandroid.movie.ui.theme.*
+import com.yandroid.movie.ui.theme.PrimaryColor
+import com.yandroid.movie.ui.theme.PrimaryDarkColor
+import com.yandroid.movie.ui.theme.SecondaryColor
+import com.yandroid.movie.ui.theme.TextColor
+import com.yandroid.movie.ui.view.ListMovies.ErrorItem
 import org.koin.androidx.compose.getViewModel
 
 @Composable
-fun SearchScreen(modifier: Modifier,navController: NavController) {
+fun SearchScreen(modifier: Modifier, navController: NavController) {
 
     val viewModel = getViewModel<SearchViewModel>()
 
@@ -75,25 +80,29 @@ fun SearchScreen(modifier: Modifier,navController: NavController) {
         topBar = {
             SearchBarView(onChange = {
                 viewModel.search(it)
+                Log.i("TAG", "SearchScreen: $it")
             })
         }, modifier = modifier.fillMaxSize()
     ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            Modifier
+                .fillMaxSize()
+                .padding(it)
         ) {
+
             AnimatedVisibility(
                 visible = !isProgressGenres.value,
                 exit = fadeOut(),
                 enter = fadeIn()
             ) {
-                if (errorText.value.isNullOrEmpty()) {
+                if (errorText.value.isNullOrEmpty() && genres.value != null) {
                     LazyRow(
                         Modifier
                             .background(PrimaryColor)
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 8.dp)
                     ) {
                         genres.value?.let { it1 ->
-                            items(it1.size ) {
+                            items(it1.size) {
                                 GenresItem(
                                     onClick = { id ->
                                         selectGenres.value = when {
@@ -115,51 +124,94 @@ fun SearchScreen(modifier: Modifier,navController: NavController) {
                 }
             }
 
-                if (errorText.value.isNullOrEmpty()) {
-                    LazyColumn(Modifier.background(Color(0xD000000))) {
-                        items(movieItems) { movie ->
-                            MovieItem(
-                                movie = movie!!, modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(4 / 2f)
-                            ) {
-                                navController.navigate("movie/$it")
-                            }
+            movieItems.let {
+
+
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+
+
+                    if (it.loadState.refresh is LoadState.Loading) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            LoadingItem()
                         }
-
-                        movieItems.apply {
-                            when {
-                                loadState.refresh is
-                                        LoadState.Loading -> {
-                                    item { LoadingItem() }
-                                }
-                                loadState.append is
-                                        LoadState.Loading -> {
-                                    item { LoadingItem() }
-                                }
-                                loadState.refresh is
-                                        LoadState.Error -> {
-                                    item { Text(text = "error") }
-                                }
-                                loadState.append is
-                                        LoadState.Error -> {
-                                    item { Text(text = "error") }
-
-                                }
-                            }
-                        }
-
                     }
-                } else {
-                    Text(
-                        text = "${errorText.value!!}\nPlease try again",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.clickable {
-                            viewModel.getGenres()
-                            movieItems.retry()
-                        })
+
+
+                    if (
+                        it.loadState.refresh is LoadState.Error
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_error_emot),
+                                    contentDescription = "",
+                                    Modifier
+                                        .fillMaxWidth(0.6f)
+                                        .aspectRatio(1f)
+                                )
+                                Text(
+                                    text = "your connection have some problem",
+                                    Modifier,
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "Try Again",
+                                    Modifier
+                                        .clickable {
+                                            movieItems.refresh()
+                                            viewModel.getGenres()
+                                        },
+                                    fontSize = 16.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = PrimaryColor
+                                )
+                            }
+                        }
+                    }
+
+
+                    if (
+                        it.loadState.refresh is LoadState.NotLoading
+                    ) {
+                        LazyColumn(
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color(0xD000000))
+                        ) {
+                            if (it.loadState.prepend is LoadState.Loading) {
+                                item {
+                                    LoadingItem()
+                                }
+                            } else if (it.loadState.prepend is LoadState.Error) {
+                                item {
+                                    ErrorItem("Some thing went Wrong") { it.retry() }
+                                }
+                            }
+                            items(it) { movie ->
+                                MovieItem(
+                                    movie = movie!!, modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(4 / 2f)
+                                ) {
+                                    navController.navigate("movie/$it")
+                                }
+                            }
+                            if (it.loadState.append is LoadState.Loading) {
+                                item {
+                                    LoadingItem()
+                                }
+                            } else if (it.loadState.append is LoadState.Error) {
+                                item {
+                                    ErrorItem("Some thing went Wrong") { it.retry() }
+                                }
+                            }
+                        }
+                    }
                 }
+            }
+
 
         }
     }
@@ -193,7 +245,7 @@ fun GenresItem(
                     onClick(genre.id)
                     selected = !selected
                 }
-                .padding(horizontal = 8.dp, vertical = 4.dp), fontSize = 16.sp
+                .padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 16.sp
         )
     }
 }
@@ -259,9 +311,12 @@ fun MovieItem(
 ) {
     val i = rememberAsyncImagePainter(model = movie.getPosterUrl)
 
-    BoxWithConstraints(modifier.padding(horizontal = 8.dp, vertical = 6.dp).clickable {
-        onClick(movie.id)
-    }) {
+    BoxWithConstraints(
+        modifier
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clickable {
+                onClick(movie.id)
+            }) {
         ConstraintLayout(Modifier.fillMaxSize()) {
             val (image_poster, title_text, overview_text, genres_text, score_text, card_container) = createRefs()
             createVerticalChain(

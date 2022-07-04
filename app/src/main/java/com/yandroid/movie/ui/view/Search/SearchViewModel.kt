@@ -1,6 +1,8 @@
 package com.yandroid.movie.ui.view.Search
 
-import androidx.lifecycle.*
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.yandroid.movie.data.model.Genre
@@ -9,9 +11,10 @@ import com.yandroid.movie.data.repository.SearchMovieRepository
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
-import java.lang.Exception
 
 class SearchViewModel(private val repository: SearchMovieRepository) : ViewModel() {
 
@@ -23,10 +26,14 @@ class SearchViewModel(private val repository: SearchMovieRepository) : ViewModel
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val result = queryState.flatMapLatest {
-        if (it.containsKey(0))
+        if (it.containsKey(0)) {
             return@flatMapLatest getMovieWithGenres(it.getValue(0))
-        else
-            return@flatMapLatest searchMovie(it.getValue(1))
+        } else {
+            if (it.getValue(1).isNotEmpty())
+                return@flatMapLatest searchMovie(it.getValue(1))
+            else
+                return@flatMapLatest getMovieWithGenres("")
+        }
     }
 
     init {
@@ -36,6 +43,7 @@ class SearchViewModel(private val repository: SearchMovieRepository) : ViewModel
     fun search(query: String) {
         queryState.value = hashMapOf(1 to query)
     }
+
     fun discover(genres: String) {
         queryState.value = hashMapOf(0 to genres)
     }

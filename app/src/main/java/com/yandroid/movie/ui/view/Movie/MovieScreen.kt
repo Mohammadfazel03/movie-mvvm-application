@@ -69,7 +69,7 @@ fun MovieScreen(id: Int, navController: NavController) {
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        if (error.value.isNullOrEmpty()) {
+        if (error.value.isNullOrEmpty() && movie.value != null) {
             Column(
                 Modifier
                     .fillMaxSize()

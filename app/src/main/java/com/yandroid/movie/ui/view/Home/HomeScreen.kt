@@ -59,6 +59,8 @@ fun HomeScreen(modifier: Modifier, navController: NavController) {
                 CircularProgressIndicator()
             }
         }
+
+
         AnimatedVisibility(
             visible = !(isProgress.value),
             enter = fadeIn(),
@@ -71,7 +73,7 @@ fun HomeScreen(modifier: Modifier, navController: NavController) {
             ) {
                 val (banner, upcoming_movie, top_movie, popular_movie, error_text) = createRefs()
 
-                if (errorText.value.isNullOrEmpty()) {
+                if (errorText.value.isNullOrEmpty() && trendingMovie.value != null && upcomingMovie.value != null && popularMovie.value != null ) {
                     HorizontalPagerWithOffsetTransition(
                         list = trendingMovie.value!!,
                         modifier = Modifier.constrainAs(banner) {
